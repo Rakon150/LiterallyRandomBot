@@ -22,10 +22,10 @@ app.command("/lrb-help", async ({ ack, respond }) => {
         /lrb-dice [d4 | d6 | d8 | d10 | d12 | d20 | d100] - Rolls a dice with the number of selected faces\n
         /lrb-range [min] [max] - picks a random number from a range\n
         /lrb-coin - flips a coin\n
-        /lrb-shuffle - \n
-        /lrb-8ball - \n
-        /lrb-password - \n
-        /lrb-choose - chooses a random entry\n\n
+        /lrb-shuffle [something] [something] ... - shuffle a list of things\n
+        /lrb-8ball [question] - answers yes/no questions\n
+        /lrb-password [lenght] - generates a random password\n
+        /lrb-choose [something] [something] ... - chooses a random entry\n\n
         Other commands:\n
         /lrb-help - shows this page\n
         /lrb-ping - check bot latency` });
@@ -49,7 +49,7 @@ app.command("/lrb-dice", async ({ command, ack, respond }) => {
     if (input in dice) {
         const sides = dice[input];
         const roll = Math.floor(Math.random() * sides) + 1;
-        return await respond({ text: `You rolled *${roll}*` });
+        return await respond({ text: `You rolled *${roll}* (${sides} sides)` });
     }
 
     await respond({ text: `Invalid input: \`${input}\`` });
@@ -67,12 +67,13 @@ app.command("/lrb-range", async ({ command, ack, respond }) => {
     }
 
     const result = Math.floor(Math.random() * (max - min + 1) + min);
-    await respond({ text: `Number *${result}* got selected` });
+    await respond({ text: `Number *${result}* got selected (${min}-${max})` });
 });
 
 app.command("/lrb-coin", async ({ ack, respond }) => {
     await ack();
 
+    let result;
     if (Math.random() > .5) {
         result = "Tails"
     } else {
@@ -106,37 +107,52 @@ app.command("/lrb-8ball", async ({ command, ack, respond }) => {
     await respond({ text: `The answer is: *${result}*` });
 });
 
+function parseItems(text) {
+    const cleaned = text.trim();
+    if (!cleaned) return [];
+    // Primary: split on commas or the word "or" (e.g. "a, b, c" or "a or b or c")
+    let parts = cleaned.split(/\s+or\s+|,\s*/i).map((c) => c.trim()).filter(Boolean);
+    // Fallback: space-separated (e.g. "/lrb-shuffle a b c")
+    if (parts.length < 2) {
+        parts = cleaned.split(/\s+/).map((c) => c.trim()).filter(Boolean);
+    }
+    return parts;
+}
+
 app.command("/lrb-shuffle", async ({ command, ack, respond }) => {
     await ack();
 
-    const input = command.text.split(/, | or /i).map((c) => c.trim()).filter(Boolean);
+    const input = parseItems(command.text);
 
-    if (!input) {
+    if (!command.text.trim()) {
         return await respond({ text: `Invalid input: \`no input\`` });
     }
-
-    const result = input[Math.floor(Math.random() * input.length)];
-
-    await respond({ text: `*${result}*` });
-});
-
-app.command("/lrb-choose", async ({ command, ack, respond }) => {
-    await ack();
-
-    const input = command.text.split(/, | or /i).map((c) => c.trim()).filter(Boolean);
-
-    if (input < 2) {
+    if (input.length < 2) {
         return await respond({ text: `Invalid input: \`no items to choose from\`` });
-    } else if (!input) {
-        return await respond({ text: `Invalid input: \`no input\`` });
     }
-
     for (let i = input.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [input[i], input[j]] = [input[j], input[i]];
     }
 
-    await respond({ text: `The answer is: *${input.join(" - ")}*` });
+    await respond({ text: `*${input.join(" - ")}*` });
+});
+
+app.command("/lrb-choose", async ({ command, ack, respond }) => {
+    await ack();
+
+    const input = parseItems(command.text);
+
+    if (!command.text.trim()) {
+        return await respond({ text: `Invalid input: \`no input\`` });
+    }
+    if (input.length < 2) {
+        return await respond({ text: `Invalid input: \`no items to choose from\`` });
+    }
+
+    const result = input[Math.floor(Math.random() * input.length)];
+
+    await respond({ text: `*${result}*` });
 });
 
 app.command("/lrb-password", async ({ command, ack, respond }) => {
