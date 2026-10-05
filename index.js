@@ -8,14 +8,15 @@ const app = new App({
     socketMode: true
 });
 
-app.command("/lrb-ping", async ({ command, ack, respond }) => {
+app.command("/lrb-ping", async ({ ack, respond }) => {
     const start = Date.now();
     await ack();
     const latency = Date.now() - start;
     await respond({ text: `Pong \nLatency: \`${latency}ms\`` });
 });
 
-app.command("/lrb-help", async ({ command, ack, respond }) => {
+app.command("/lrb-help", async ({ ack, respond }) => {
+    await ack();
     await respond({
         text: `Commands for LRB: \n
         /lrb-dice [d4 | d6 | d8 | d10 | d12 | d20 | d100] - Rolls a dice with the number of selected faces\n
@@ -65,10 +66,10 @@ app.command("/lrb-range", async ({ command, ack, respond }) => {
     await respond({ text: `Number *${result}* got selected` });
 });
 
-app.command("/lrb-coin", async ({ command, ack, respond }) => {
+app.command("/lrb-coin", async ({ ack, respond }) => {
     await ack();
 
-    if (Math.random() > 50) {
+    if (Math.random() > .5) {
         result = "Tails"
     } else {
         result = "Heads"
@@ -99,6 +100,59 @@ app.command("/lrb-8ball", async ({ command, ack, respond }) => {
     const result = answers[Math.floor(Math.random() * answers.length)];
 
     await respond({ text: `The answer is: *${result}*` });
+});
+
+app.command("/lrb-shuffle", async ({ command, ack, respond }) => {
+    await ack();
+
+    const input = command.split.text(/, | or /i).map(c => trim()).filter(Boolean);
+
+    if (input < 2) {
+        return await respond({ text: `Invalid input: \`no items to choose from\`` });
+    } else if (!input) {
+        return await respond({ text: `Invalid input: \`no input\`` });
+    }
+
+    const result = input[Math.floor(Math.random() * input.length)];
+
+    await respond({ text: `I picked: *${result}*` });
+});
+
+app.command("/lrb-choose", async ({ command, ack, respond }) => {
+    await ack();
+
+    const input = command.split.text(/, | or /i).map(c => trim()).filter(Boolean);
+
+    if (input < 2) {
+        return await respond({ text: `Invalid input: \`no items to choose from\`` });
+    } else if (!input) {
+        return await respond({ text: `Invalid input: \`no input\`` });
+    }
+
+    for (let i = input.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [items[i], items[j]] = [items[j], items[i]];
+    }
+
+    await respond({ text: `The answer is: *${input.join(" - ")}*` });
+});
+
+app.command("/lrb-password", async ({ command, ack, respond }) => {
+    await ack();
+
+    const length = parseInt(command.text.trim(), 10) || 12;
+    if (lenght < 4 || lenght > 128) {
+        return await respond({ text: `Invalid input: \`${length}\`` });
+    }
+
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+    let result = "";
+
+    for (let i = 0; i < lenght; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    await respond({ text: `Generated password: *${result}*` });
 });
 
 (async () => {
